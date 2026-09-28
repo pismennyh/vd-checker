@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 import urllib.parse
 import time
+import re
 
 st.set_page_config(page_title="Проверка запчастей VolgaDiesel", layout="wide")
 st.title("Проверка наличия запчастей на vd-dizel.ru")
@@ -29,6 +30,7 @@ if uploaded_file:
         progress_bar = st.progress(0)
         status_text = st.empty()
         results = []
+        links = []
         
         headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
@@ -42,24 +44,52 @@ if uploaded_file:
             
             if not article or article.lower() == "nan":
                 results.append("Пусто")
+                links.append("")
                 progress_bar.progress((index + 1) / total_rows)
                 continue
-                
-            search_url = f"https://vd-dizel.ru/?dispatch=products.search&q={urllib.parse.quote(article)}"
+            
+            # Используем поиск Google по сайту
+            search_query = f'site:vd-dizel.ru "{article}"'
+            google_url = f"https://www.google.com/search?q={urllib.parse.quote(search_query)}"
             
             try:
-                response = requests.get(search_url, headers=headers, timeout=5)
-                if response.status_code == 200 and article in response.text:
-                    results.append("✅ Есть")
-                else:
-                    results.append("❌ Нет")
-            except Exception:
-                results.append("⚠️ Ошибка сети")
+                response = requests.get(google_url, headers=headers, timeout=10)
                 
-            time.sleep(0.3) # Задержка для снижения нагрузки на сайт
+                # Проверяем, есть ли результаты поиска
+                # Google возвращает результаты, если найдет совпадения
+                if response.status_code == 200:
+                    # Ищем признаки наличия результатов
+                    has_results = (
+                        'class="g"' in response.text or  # Класс для результатов поиска
+                        'data-href="https://vd-dizel.ru' in response.text or
+                        f'vd-dizel.ru' in response.text and article in response.text
+                    )
+                    
+                    if has_results:
+                        # Пытаемся извлечь ссылку
+                        link_match = re.search(r'href="(https://vd-dizel\.ru/[^"]+)"', response.text)
+                        if link_match:
+                            results.append("✅ Есть")
+                            links.append(link_match.group(1))
+                        else:
+                            results.append("✅ Есть")
+                            links.append("https://vd-dizel.ru")
+                    else:
+                        results.append("❌ Нет")
+                        links.append("")
+                else:
+                    results.append("⚠️ Ошибка сети")
+                    links.append("")
+                    
+            except Exception as e:
+                results.append("⚠️ Ошибка сети")
+                links.append("")
+                
+            time.sleep(1) # Увеличенная задержка для Google
             progress_bar.progress((index + 1) / total_rows)
             
         df["Статус на сайте"] = results
+        df["Ссылка"] = links
         status_text.text("Готово!")
         
         # Формирование файла для скачивания
