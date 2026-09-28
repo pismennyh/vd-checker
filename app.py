@@ -33,7 +33,8 @@ if uploaded_file:
         links = []
         
         headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+            "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7"
         }
         
         total_rows = len(df)
@@ -48,22 +49,16 @@ if uploaded_file:
                 progress_bar.progress((index + 1) / total_rows)
                 continue
             
-            # Используем поиск Google по сайту
-            search_query = f'site:vd-dizel.ru "{article}"'
-            google_url = f"https://www.google.com/search?q={urllib.parse.quote(search_query)}"
+            # Используем Yandex поиск по сайту
+            search_query = f'site:vd-dizel.ru {article}'
+            yandex_url = f"https://yandex.ru/search/?text={urllib.parse.quote(search_query)}"
             
             try:
-                response = requests.get(google_url, headers=headers, timeout=10)
+                response = requests.get(yandex_url, headers=headers, timeout=10)
                 
-                # Проверяем, есть ли результаты поиска
-                # Google возвращает результаты, если найдет совпадения
                 if response.status_code == 200:
-                    # Ищем признаки наличия результатов
-                    has_results = (
-                        'class="g"' in response.text or  # Класс для результатов поиска
-                        'data-href="https://vd-dizel.ru' in response.text or
-                        f'vd-dizel.ru' in response.text and article in response.text
-                    )
+                    # Проверяем наличие результатов от vd-dizel.ru
+                    has_results = 'vd-dizel.ru' in response.text
                     
                     if has_results:
                         # Пытаемся извлечь ссылку
@@ -75,7 +70,7 @@ if uploaded_file:
                             results.append("✅ Есть")
                             links.append("https://vd-dizel.ru")
                     else:
-                        results.append("❌ Нет")
+                        results.append(" Нет")
                         links.append("")
                 else:
                     results.append("⚠️ Ошибка сети")
@@ -85,7 +80,7 @@ if uploaded_file:
                 results.append("⚠️ Ошибка сети")
                 links.append("")
                 
-            time.sleep(1) # Увеличенная задержка для Google
+            time.sleep(2) # Задержка для Yandex
             progress_bar.progress((index + 1) / total_rows)
             
         df["Статус на сайте"] = results
