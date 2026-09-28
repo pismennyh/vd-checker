@@ -60,45 +60,42 @@ if uploaded_file:
                 progress_bar.progress((index + 1) / total_rows)
                 continue
             
-            # Прямой запрос к поиску на сайте
-            search_url = f"https://vd-dizel.ru/?dispatch=products.search&q={urllib.parse.quote(article)}"
+            # Преобразуем артикул в формат URL (как на сайте)
+            # Пример: 0219.52.030-3 -> 0219-52-030-3
+            article_url = article.replace(".", "-").replace("_", "-").replace(" ", "-").lower()
             
-            try:
-                response = session.get(search_url, headers=headers, timeout=15, allow_redirects=True)
-                
-                if response.status_code == 200:
-                    html_content = response.text.lower()
+            # Пробуем несколько вариантов URL
+            urls_to_check = [
+                f"https://vd-dizel.ru/{article_url}/",
+                f"https://vd-dizel.ru/product-{article_url}/",
+                f"https://vd-dizel.ru/catalog/{article_url}/"
+            ]
+            
+            found = False
+            found_url = ""
+            
+            for url in urls_to_check:
+                try:
+                    response = session.get(url, headers=headers, timeout=10, allow_redirects=True)
                     
-                    # Проверяем несколько признаков наличия товара
-                    has_nothing = "ничего не найдено" in html_content or "товаров не найдено" in html_content
-                    has_results = (
-                        article.lower() in html_content and 
-                        "результаты поиска" in html_content and
-                        not has_nothing
-                    )
-                    
-                    # Ищем ссылку на товар
-                    link_pattern = rf'href="(https://vd-dizel\.ru/[^"]*{re.escape(article.replace(".", "-").replace("_", "-"))}[^"]*)"'
-                    link_match = re.search(link_pattern, response.text)
-                    
-                    if has_results or link_match:
-                        results.append("✅ Есть")
-                        if link_match:
-                            links.append(link_match.group(1))
-                        else:
-                            links.append("https://vd-dizel.ru")
-                    else:
-                        results.append("❌ Нет")
-                        links.append("")
-                else:
-                    results.append("⚠️ Ошибка сети")
-                    links.append("")
-                    
-            except Exception as e:
-                results.append("⚠️ Ошибка сети")
+                    # Если страница существует (не 404) и содержит артикул
+                    if response.status_code == 200:
+                        # Проверяем, что это страница товара, а не главная
+                        if article.lower() in response.text.lower() and len(response.text) > 5000:
+                            found = True
+                            found_url = response.url
+                            break
+                except:
+                    continue
+            
+            if found:
+                results.append("✅ Есть")
+                links.append(found_url)
+            else:
+                results.append("❌ Нет")
                 links.append("")
                 
-            time.sleep(2)
+            time.sleep(1)
             progress_bar.progress((index + 1) / total_rows)
             
         df["Статус на сайте"] = results
