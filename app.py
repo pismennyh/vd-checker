@@ -34,6 +34,7 @@ if uploaded_file:
         
         headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
             "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7"
         }
         
@@ -49,12 +50,12 @@ if uploaded_file:
                 progress_bar.progress((index + 1) / total_rows)
                 continue
             
-            # Используем Yandex поиск по сайту
+            # Используем DuckDuckGo для поиска
             search_query = f'site:vd-dizel.ru {article}'
-            yandex_url = f"https://yandex.ru/search/?text={urllib.parse.quote(search_query)}"
+            duckduckgo_url = f"https://duckduckgo.com/html/?q={urllib.parse.quote(search_query)}"
             
             try:
-                response = requests.get(yandex_url, headers=headers, timeout=10)
+                response = requests.get(duckduckgo_url, headers=headers, timeout=10)
                 
                 if response.status_code == 200:
                     # Проверяем наличие результатов от vd-dizel.ru
@@ -80,7 +81,7 @@ if uploaded_file:
                 results.append("⚠️ Ошибка сети")
                 links.append("")
                 
-            time.sleep(2) # Задержка для Yandex
+            time.sleep(1.5)
             progress_bar.progress((index + 1) / total_rows)
             
         df["Статус на сайте"] = results
