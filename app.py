@@ -50,12 +50,12 @@ if uploaded_file:
                 progress_bar.progress((index + 1) / total_rows)
                 continue
             
-            # Используем DuckDuckGo для поиска
+            # Используем Bing поиск
             search_query = f'site:vd-dizel.ru {article}'
-            duckduckgo_url = f"https://duckduckgo.com/html/?q={urllib.parse.quote(search_query)}"
+            bing_url = f"https://www.bing.com/search?q={urllib.parse.quote(search_query)}"
             
             try:
-                response = requests.get(duckduckgo_url, headers=headers, timeout=10)
+                response = requests.get(bing_url, headers=headers, timeout=10)
                 
                 if response.status_code == 200:
                     # Проверяем наличие результатов от vd-dizel.ru
@@ -71,7 +71,7 @@ if uploaded_file:
                             results.append("✅ Есть")
                             links.append("https://vd-dizel.ru")
                     else:
-                        results.append(" Нет")
+                        results.append("❌ Нет")
                         links.append("")
                 else:
                     results.append("⚠️ Ошибка сети")
@@ -81,7 +81,7 @@ if uploaded_file:
                 results.append("⚠️ Ошибка сети")
                 links.append("")
                 
-            time.sleep(1.5)
+            time.sleep(1)
             progress_bar.progress((index + 1) / total_rows)
             
         df["Статус на сайте"] = results
